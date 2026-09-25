@@ -10,16 +10,37 @@ const types = [
 
 function App() {
   const [selectedType, setSelectedType] = useState('')
+  const [result, setResult] = useState('')
 
-  function getMatchup(type) {
-    // CALL THE BACKEND (API)
-    // API CALL WILL GO HERE, AND WE WILL RETURN THE RESPONSE
-    return `Fake API response: You are fighting a ${type}-type Pokémon.`;
+  async function getMatchup(type) {
+    try {
+      const response = await fetch(`http://localhost:5001/api/type/${type.toLowerCase()}`)
+      if (!response.ok) throw new Error('Request failed')
+      return await response.json()
+    } catch {
+      return { error: 'Could not load the matchup.' }
+    }
   }
 
-  function handleTypeClick(type) {
-    const response = getMatchup(type);
-    setSelectedType(response);
+  async function handleTypeClick(type) {
+    setSelectedType(type)
+    setResult('Loading...')
+    const response = await getMatchup(type)
+    if (response.error) {
+      setResult(response.error)
+      return
+    }
+
+    const attackTypes = response.double_damage_from.join(', ')
+    const defenseTypes = response.half_damage_to.join(', ')
+    const attackAdvice = attackTypes
+      ? `Use ${attackTypes} moves to deal double damage.`
+      : `No move types deal double damage to ${type}.`
+    const defenseAdvice = defenseTypes
+      ? `Choose ${defenseTypes} Pokémon to take half damage from ${type}-type moves.`
+      : `No Pokémon types take half damage from ${type}-type moves.`
+
+    setResult(`For single-type matchups:\n\n${attackAdvice}\n\n${defenseAdvice}`)
   }
 
 
@@ -70,6 +91,11 @@ function App() {
         <p aria-live="polite" className="mt-5 min-h-5 text-sm text-stone-500">
           {selectedType || 'Choose a type to get started.'}
         </p>
+        {result && (
+          <p aria-live="polite" className="mt-3 whitespace-pre-line text-sm leading-relaxed text-stone-700">
+            {result}
+          </p>
+        )}
       </section>
     </main>
   )
